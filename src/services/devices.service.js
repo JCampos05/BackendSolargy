@@ -2,6 +2,25 @@ const { Device, Reading, ZonaHoraria, Event, DailyStatistic } = require('../mode
 const { Op } = require('sequelize');
 
 /**
+ * Detecta la zona horaria más apropiada según las coordenadas
+ * Basado en rangos de longitud aproximados
+ */
+const detectTimezoneByCoordinates = (longitude) => {
+    // Conversión simple: cada 15 grados de longitud = 1 hora
+    const offsetHours = Math.round(longitude / 15);
+    
+    // Mapeo de offset a IDs de zonas horarias
+    const timezoneMap = {
+        '-12': 1, '-11': 2, '-10': 3, '-9': 4, '-8': 5, '-7': 6,
+        '-6': 7, '-5': 8, '-4': 9, '-3': 10, '-2': 11, '-1': 12,
+        '0': 13, '1': 14, '2': 15, '3': 16, '4': 17, '5': 18,
+        '6': 19, '7': 20, '8': 21, '9': 22, '10': 23, '11': 23, '12': 24
+    };
+    
+    return timezoneMap[offsetHours.toString()] || 7; // Default: CST (UTC-6)
+};
+
+/**
  * Obtener todos los dispositivos
  */
 exports.getAllDevices = async (filters = {}) => {
@@ -134,6 +153,14 @@ exports.updateDevice = async (deviceId, updates) => {
                     filteredUpdates[field] = updates[field];
                 }
             }
+        }
+
+        // Detectar zona horaria automáticamente si se actualizan coordenadas
+        // pero NO se especifica zona horaria explícitamente
+        if (updates.hasOwnProperty('longitud') && updates.longitud !== null && !updates.hasOwnProperty('idZonaHoraria')) {
+            const detectedTimezone = detectTimezoneByCoordinates(parseFloat(updates.longitud));
+            filteredUpdates.idZonaHoraria = detectedTimezone;
+            console.log(`Zona horaria detectada automáticamente: ${detectedTimezone} para longitud ${updates.longitud}`);
         }
 
         console.log('Actualizando dispositivo:', deviceId);

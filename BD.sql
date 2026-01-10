@@ -248,10 +248,15 @@ CREATE TABLE system_info (
   fechaInicioOperacion DATE DEFAULT NULL COMMENT 'Fecha de inicio de operaciones',
   ultimaActualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   metadataAdicional JSON DEFAULT NULL COMMENT 'Datos adicionales del sistema',
-  
+  idZonaHoraria TINYINT UNSIGNED DEFAULT 7 COMMENT 'Zona horaria del sistema',
+
   -- Índices
   INDEX idx_estado (estadoGeneral),
-  INDEX idx_actualizacion (ultimaActualizacion)
+  INDEX idx_actualizacion (ultimaActualizacion),
+  ADD INDEX idx_zona_horaria (idZonaHoraria),
+  ADD FOREIGN KEY (idZonaHoraria) REFERENCES zonas_horarias(idZonaHoraria)
+    ON DELETE RESTRICT
+    ON UPDATE CASCADE;
 ) ;
 
 

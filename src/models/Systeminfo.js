@@ -18,6 +18,52 @@ const SystemInfo = sequelize.define('SystemInfo', {
         allowNull: false,
         comment: 'Versión actual del sistema'
     },
+    localizacion: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        comment: 'Ubicación física del sistema'
+    },
+    latitud: {
+        type: DataTypes.DECIMAL(10, 8),
+        allowNull: true,
+        comment: 'Latitud de la instalación'
+    },
+    longitud: {
+        type: DataTypes.DECIMAL(11, 8),
+        allowNull: true,
+        comment: 'Longitud de la instalación'
+    },
+    idZonaHoraria: {
+        type: DataTypes.TINYINT.UNSIGNED,
+        allowNull: true,
+        defaultValue: 7,
+        comment: 'Zona horaria del sistema'
+    },
+    ciudad: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'Ciudad'
+    },
+    estado: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'Estado/Provincia'
+    },
+    pais: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'País'
+    },
+    codigoPostal: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        comment: 'Código postal'
+    },
+    altitud: {
+        type: DataTypes.DECIMAL(8, 2),
+        allowNull: true,
+        comment: 'Altitud sobre el nivel del mar (m)'
+    },
     totalDispositivos: {
         type: DataTypes.INTEGER.UNSIGNED,
         defaultValue: 0,
@@ -85,7 +131,9 @@ const SystemInfo = sequelize.define('SystemInfo', {
     timestamps: false,
     indexes: [
         { fields: ['estadoGeneral'] },
-        { fields: ['ultimaActualizacion'] }
+        { fields: ['ultimaActualizacion'] },
+        { fields: ['latitud', 'longitud'] },
+        { fields: ['idZonaHoraria'] }
     ]
 });
 

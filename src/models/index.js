@@ -11,6 +11,11 @@ const SystemInfo = require('./SystemInfo');
 
 // ========== DEFINIR RELACIONES ==========
 
+SystemInfo.belongsTo(ZonaHoraria, {
+    foreignKey: 'idZonaHoraria',
+    as: 'zonaHoraria'
+});
+
 // ZonaHoraria -> Device (1:N)
 ZonaHoraria.hasMany(Device, {
     foreignKey: 'idZonaHoraria',
