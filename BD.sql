@@ -226,6 +226,19 @@ CREATE TABLE system_info (
   nombreSistema VARCHAR(100) NOT NULL DEFAULT 'Solargy' COMMENT 'Nombre del sistema',
   versionSistema VARCHAR(20) NOT NULL COMMENT 'Versión actual del sistema',
   
+  -- Ubicación del sistema (AGREGADO)
+  localizacion VARCHAR(255) DEFAULT NULL COMMENT 'Ubicación física del sistema',
+  latitud DECIMAL(10, 8) DEFAULT NULL COMMENT 'Latitud de la instalación',
+  longitud DECIMAL(11, 8) DEFAULT NULL COMMENT 'Longitud de la instalación',
+  ciudad VARCHAR(100) DEFAULT NULL COMMENT 'Ciudad',
+  estado VARCHAR(100) DEFAULT NULL COMMENT 'Estado/Provincia',
+  pais VARCHAR(100) DEFAULT NULL COMMENT 'País',
+  codigoPostal VARCHAR(20) DEFAULT NULL COMMENT 'Código postal',
+  altitud DECIMAL(8, 2) DEFAULT NULL COMMENT 'Altitud sobre el nivel del mar (m)',
+  
+  -- Zona horaria
+  idZonaHoraria TINYINT UNSIGNED DEFAULT 7 COMMENT 'Zona horaria del sistema',
+  
   -- Estadísticas generales
   totalDispositivos INT UNSIGNED DEFAULT 0 COMMENT 'Total de dispositivos registrados',
   dispositivosActivos INT UNSIGNED DEFAULT 0 COMMENT 'Dispositivos actualmente activos',
@@ -248,16 +261,19 @@ CREATE TABLE system_info (
   fechaInicioOperacion DATE DEFAULT NULL COMMENT 'Fecha de inicio de operaciones',
   ultimaActualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   metadataAdicional JSON DEFAULT NULL COMMENT 'Datos adicionales del sistema',
-  idZonaHoraria TINYINT UNSIGNED DEFAULT 7 COMMENT 'Zona horaria del sistema',
-
-  -- Índices
+  
+  -- Índices (SINTAXIS CORRECTA)
   INDEX idx_estado (estadoGeneral),
   INDEX idx_actualizacion (ultimaActualizacion),
-  ADD INDEX idx_zona_horaria (idZonaHoraria),
-  ADD FOREIGN KEY (idZonaHoraria) REFERENCES zonas_horarias(idZonaHoraria)
+  INDEX idx_zona_horaria (idZonaHoraria),
+  INDEX idx_coordenadas (latitud, longitud),
+  
+  -- Relación con zona horaria
+  FOREIGN KEY (idZonaHoraria) REFERENCES zonas_horarias(idZonaHoraria)
     ON DELETE RESTRICT
-    ON UPDATE CASCADE;
-) ;
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 
 -- ============================================

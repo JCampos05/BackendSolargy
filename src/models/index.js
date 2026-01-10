@@ -7,7 +7,7 @@ const Reading = require('./Reading');
 const DailyStatistic = require('./DailyStatistic');
 const DeviceThreshold = require('./DeviceThreshold');
 const Event = require('./Event');
-const SystemInfo = require('./SystemInfo');
+const SystemInfo = require('./Systeminfo');
 
 // ========== DEFINIR RELACIONES ==========
 
