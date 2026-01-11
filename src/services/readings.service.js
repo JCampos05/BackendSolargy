@@ -1,4 +1,5 @@
 const { Device, Reading, Event, ZonaHoraria } = require('../models');
+const { Op } = require('sequelize');
 const statisticsService = require('./statistics.service');
 const { millisToUTC } = require('../utils/timezone');
 const { calculateEfficiency, mWtoW, mAtoA, formatUptime } = require('../utils/calculations');
@@ -273,6 +274,49 @@ class ReadingsService {
             return readings;
         } catch (error) {
             console.error('Error al obtener historial:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener lecturas por rango de fechas
+     */
+    async getReadingsByDateRange(deviceId, startDate, endDate) {
+        try {
+            console.log('getReadingsByDateRange llamado con:', {
+                deviceId,
+                startDate,
+                endDate
+            });
+
+            const where = {
+                idDispositivo: deviceId,
+                timestampUTC: {
+                    [Op.between]: [startDate, endDate]
+                }
+            };
+
+            const readings = await Reading.findAll({
+                where,
+                order: [['timestampUTC', 'ASC']],
+                include: [{
+                    model: Device,
+                    as: 'dispositivo'
+                }]
+            });
+
+            console.log(`Lecturas encontradas: ${readings.length}`);
+            if (readings.length > 0) {
+                console.log('Primera lectura:', {
+                    voltage: readings[0].voltage,
+                    power: readings[0].power,
+                    timestampUTC: readings[0].timestampUTC
+                });
+            }
+
+            return readings;
+        } catch (error) {
+            console.error('Error al obtener lecturas por rango:', error);
             throw error;
         }
     }

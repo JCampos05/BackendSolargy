@@ -98,3 +98,36 @@ exports.getAllReadings = async (req, res) => {
         });
     }
 };
+
+// Obtener lecturas por rango de fechas
+exports.getReadingsByDateRange = async (req, res) => {
+    try {
+        const { deviceId, startDate, endDate } = req.query;
+
+        if (!deviceId || !startDate || !endDate) {
+            return res.status(400).json({
+                success: false,
+                message: 'deviceId, startDate y endDate son requeridos'
+            });
+        }
+
+        const readings = await readingsService.getReadingsByDateRange(
+            deviceId,
+            new Date(startDate),
+            new Date(endDate)
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Lecturas obtenidas',
+            count: readings.length,
+            data: readings
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener lecturas',
+            error: error.message
+        });
+    }
+};
