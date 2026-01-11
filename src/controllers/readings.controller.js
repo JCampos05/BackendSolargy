@@ -43,13 +43,14 @@ exports.receiveReading = async (req, res) => {
 // Obtener última lectura
 exports.getLatestReading = async (req, res) => {
     try {
-        const { deviceId } = req.query; // Permitir filtrar por dispositivo
+        const { deviceId } = req.query;
         const latestReading = await readingsService.getLatestReading(deviceId);
 
         if (!latestReading) {
-            return res.status(404).json({
+            return res.status(200).json({
                 success: false,
-                message: 'No hay lecturas disponibles aún'
+                message: 'No hay lecturas recientes disponibles. El dispositivo puede estar desconectado.',
+                data: null
             });
         }
 
@@ -63,7 +64,8 @@ exports.getLatestReading = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error al obtener la última lectura',
-            error: error.message
+            error: error.message,
+            data: null
         });
     }
 };

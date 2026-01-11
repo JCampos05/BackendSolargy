@@ -205,12 +205,14 @@ class ReadingsService {
     }
 
     /**
-     * Obtener última lectura de un dispositivo
-     */
+         * Obtener última lectura de un dispositivo
+         */
     async getLatestReading(deviceId) {
         try {
+            const where = deviceId ? { idDispositivo: deviceId } : {};
+
             const reading = await Reading.findOne({
-                where: deviceId ? { idDispositivo: deviceId } : {},
+                where,
                 order: [['fechaCreacion', 'DESC']],
                 include: [{
                     model: Device,
@@ -221,6 +223,28 @@ class ReadingsService {
                     }]
                 }]
             });
+
+            if (!reading) {
+                return null;
+            }
+
+            // Verificar si la lectura es reciente (últimos 5 minutos)
+            const now = Date.now();
+            const readingTime = new Date(reading.fechaCreacion).getTime();
+            const minutesSinceReading = (now - readingTime) / (1000 * 60);
+
+            /*console.log('getLatestReading:', {
+                readingId: reading.idReading,
+                voltage: reading.voltage,
+                fechaCreacion: reading.fechaCreacion,
+                minutesSinceReading: minutesSinceReading
+            });*/
+
+            // Si han pasado más de 5 minutos, considerar el dispositivo offline
+            if (minutesSinceReading > 5) {
+                console.log('Lectura muy antigua, retornando null');
+                return null;
+            }
 
             return reading;
         } catch (error) {
