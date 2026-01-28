@@ -6,10 +6,10 @@
  * Calcular eficiencia del panel solar
  * @param {number} powerMW - Potencia en mW
  * @param {number} irradiance - Irradiancia en W/m²
- * @param {number} panelAreaM2 - Área del panel en m² (default: 0.01 para panel 5V@160mA)
+ * @param {number} panelAreaM2 - Área del panel en m² (default: 0.01 para panel 5V@160mA) -> 57.75 cm2 = 0.005775m2
  * @returns {number} Eficiencia en porcentaje (0-100)
  */
-function calculateEfficiency(powerMW, irradiance, panelAreaM2 = 0.01) {
+function calculateEfficiency(powerMW, irradiance, panelAreaM2 = 0.0057) {
     if (irradiance <= 0 || powerMW <= 0 || panelAreaM2 <= 0) {
         return 0;
     }

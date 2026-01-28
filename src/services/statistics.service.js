@@ -14,6 +14,13 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
         const fechaLocal = new Date(fechaUTC.getTime() + (offsetHours * 60 * 60 * 1000));
         const fechaEstadistica = fechaLocal.toISOString().split('T')[0]; // YYYY-MM-DD
 
+        console.log('[Stats] Actualizando estadísticas:', {
+            deviceId,
+            fechaEstadistica,
+            offsetHours,
+            timestampUTC: reading.timestampUTC
+        });
+
         // 2. Buscar estadística existente para este día
         let statistic = await DailyStatistic.findOne({
             where: {
@@ -38,25 +45,35 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
                 factorCapacidad: 0,
                 lecturasTotales: 0
             });
+            console.log('[Stats] Estadística creada para:', fechaEstadistica);
         }
 
-        // 4. Obtener todas las lecturas del día para recalcular
-        const startDate = new Date(fechaEstadistica + 'T00:00:00Z');
-        const endDate = new Date(fechaEstadistica + 'T23:59:59Z');
+        // 4. CORREGIDO: Obtener todas las lecturas del día en hora LOCAL
+        // Convertir la fecha local del dispositivo a UTC para buscar
+        const startDateLocal = new Date(fechaEstadistica + 'T00:00:00');
+        const endDateLocal = new Date(fechaEstadistica + 'T23:59:59.999');
+        
+        // Convertir a UTC restando el offset
+        const startDateUTC = new Date(startDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
+        const endDateUTC = new Date(endDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
 
-        // Ajustar por zona horaria
-        startDate.setHours(startDate.getHours() - offsetHours);
-        endDate.setHours(endDate.getHours() - offsetHours);
+        console.log('[Stats] Buscando lecturas:', {
+            fechaEstadistica,
+            startDateUTC: startDateUTC.toISOString(),
+            endDateUTC: endDateUTC.toISOString()
+        });
 
         const readings = await Reading.findAll({
             where: {
                 idDispositivo: deviceId,
                 timestampUTC: {
-                    [Op.between]: [startDate, endDate]
+                    [Op.between]: [startDateUTC, endDateUTC]
                 }
             },
             order: [['timestampUTC', 'ASC']]
         });
+
+        console.log('[Stats] Lecturas encontradas:', readings.length);
 
         if (readings.length === 0) {
             return statistic;
@@ -71,10 +88,17 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
         const maxPowerReading = readings.reduce((prev, current) =>
             parseFloat(current.power) > parseFloat(prev.power) ? current : prev
         );
-        // Crear nueva fecha con offset correcto
+        
+        // Convertir timestamp UTC a hora local
         const maxPowerTimeUTC = new Date(maxPowerReading.timestampUTC);
         const maxPowerTimeLocal = new Date(maxPowerTimeUTC.getTime() + (offsetHours * 60 * 60 * 1000));
         const picoPotenciaHora = maxPowerTimeLocal.toTimeString().split(' ')[0];
+
+        console.log('[Stats] Pico de potencia:', {
+            power: Math.max(...powers),
+            hora: picoPotenciaHora,
+            timestampUTC: maxPowerReading.timestampUTC
+        });
 
         // Minutos con luz útil
         const minutosLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
@@ -118,6 +142,12 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
             lecturasTotales: readings.length
         });
 
+        console.log('[Stats] Estadística actualizada:', {
+            fechaEstadistica,
+            picoPotencia: Math.max(...powers),
+            lecturas: readings.length
+        });
+
         return statistic;
 
     } catch (error) {
@@ -142,20 +172,34 @@ exports.generateDailyStats = async (deviceId, date) => {
             throw new Error('Dispositivo no encontrado');
         }
 
-        // Convertir fecha string a Date objects para el rango
-        const startDate = new Date(date + 'T00:00:00Z');
-        const endDate = new Date(date + 'T23:59:59Z');
+        const offsetHours = device.zonaHoraria ? parseFloat(device.zonaHoraria.offsetUTC) : 0;
+
+        // CORREGIDO: Convertir la fecha local a rango UTC
+        const startDateLocal = new Date(date + 'T00:00:00');
+        const endDateLocal = new Date(date + 'T23:59:59.999');
+        
+        const startDateUTC = new Date(startDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
+        const endDateUTC = new Date(endDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
+
+        console.log('[Generate Stats] Generando para:', {
+            deviceId,
+            date,
+            startDateUTC: startDateUTC.toISOString(),
+            endDateUTC: endDateUTC.toISOString()
+        });
 
         // Obtener todas las lecturas del día
         const readings = await Reading.findAll({
             where: {
                 idDispositivo: deviceId,
                 timestampUTC: {
-                    [Op.between]: [startDate, endDate]
+                    [Op.between]: [startDateUTC, endDateUTC]
                 }
             },
             order: [['timestampUTC', 'ASC']]
         });
+
+        console.log('[Generate Stats] Lecturas encontradas:', readings.length);
 
         if (readings.length === 0) {
             return {
@@ -170,14 +214,19 @@ exports.generateDailyStats = async (deviceId, date) => {
         const radiations = readings.map(r => parseFloat(r.solarRadiation));
         const irradiances = readings.map(r => parseFloat(r.irradiance));
 
-        // Encontrar pico de potencia y su hora
+        // Encontrar pico de potencia y su hora LOCAL
         const maxPowerReading = readings.reduce((prev, current) =>
             parseFloat(current.power) > parseFloat(prev.power) ? current : prev
         );
 
         const maxPowerTimeUTC = new Date(maxPowerReading.timestampUTC);
-        const maxPowerTimeLocal = new Date(maxPowerTimeUTC.getTime() + (device.zonaHoraria.offsetUTC * 60 * 60 * 1000));
+        const maxPowerTimeLocal = new Date(maxPowerTimeUTC.getTime() + (offsetHours * 60 * 60 * 1000));
         const picoPotenciaHora = maxPowerTimeLocal.toTimeString().split(' ')[0];
+
+        console.log('[Generate Stats] Pico encontrado:', {
+            power: Math.max(...powers),
+            hora: picoPotenciaHora
+        });
 
         // Calcular minutos con luz útil (irradiancia > 50 W/m²)
         const minutosLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
@@ -224,6 +273,11 @@ exports.generateDailyStats = async (deviceId, date) => {
             returning: true
         });
 
+        console.log('[Generate Stats] Estadística guardada:', {
+            created,
+            picoPotencia: Math.max(...powers)
+        });
+
         return {
             created,
             statistic,
@@ -263,6 +317,12 @@ exports.getDailyStats = async (deviceId, startDate, endDate) => {
                 attributes: ['idDispositivo', 'nombre', 'localizacion']
             }],
             order: [['fechaEstadistica', 'DESC']]
+        });
+
+        console.log('[Get Stats] Estadísticas encontradas:', statistics.length, {
+            startDate,
+            endDate,
+            deviceId
         });
 
         return statistics;
