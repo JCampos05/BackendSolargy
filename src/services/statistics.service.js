@@ -52,7 +52,7 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
         // Convertir la fecha local del dispositivo a UTC para buscar
         const startDateLocal = new Date(fechaEstadistica + 'T00:00:00');
         const endDateLocal = new Date(fechaEstadistica + 'T23:59:59.999');
-        
+
         // Convertir a UTC restando el offset
         const startDateUTC = new Date(startDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
         const endDateUTC = new Date(endDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
@@ -88,7 +88,7 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
         const maxPowerReading = readings.reduce((prev, current) =>
             parseFloat(current.power) > parseFloat(prev.power) ? current : prev
         );
-        
+
         // Convertir timestamp UTC a hora local
         const maxPowerTimeUTC = new Date(maxPowerReading.timestampUTC);
         const maxPowerTimeLocal = new Date(maxPowerTimeUTC.getTime() + (offsetHours * 60 * 60 * 1000));
@@ -100,8 +100,27 @@ exports.updateDailyStatsRealTime = async (deviceId, reading, device) => {
             timestampUTC: maxPowerReading.timestampUTC
         });
 
-        // Minutos con luz útil
-        const minutosLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
+        // Contar lecturas con luz útil
+        const lecturasConLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
+
+        // Calcular intervalo promedio entre lecturas (en segundos)
+        let intervaloPromedioSegundos = 60; // Por defecto 1 minuto
+
+        if (readings.length > 1) {
+            const primeraLectura = new Date(readings[0].timestampUTC).getTime();
+            const ultimaLectura = new Date(readings[readings.length - 1].timestampUTC).getTime();
+            const tiempoTotalSegundos = (ultimaLectura - primeraLectura) / 1000;
+            intervaloPromedioSegundos = tiempoTotalSegundos / (readings.length - 1);
+        }
+
+        // Calcular minutos reales con luz útil
+        const minutosLuzUtil = Math.round((lecturasConLuzUtil * intervaloPromedioSegundos) / 60);
+
+        console.log('[Stats] Luz útil calculada:', {
+            lecturasConLuz: lecturasConLuzUtil,
+            intervaloSegundos: intervaloPromedioSegundos.toFixed(2),
+            minutosLuzUtil: minutosLuzUtil
+        });
 
         // Energía total (última lectura - primera lectura del día)
         const energiaTotalDia = parseFloat(readings[readings.length - 1].energiaAcumulada) -
@@ -177,7 +196,7 @@ exports.generateDailyStats = async (deviceId, date) => {
         // CORREGIDO: Convertir la fecha local a rango UTC
         const startDateLocal = new Date(date + 'T00:00:00');
         const endDateLocal = new Date(date + 'T23:59:59.999');
-        
+
         const startDateUTC = new Date(startDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
         const endDateUTC = new Date(endDateLocal.getTime() - (offsetHours * 60 * 60 * 1000));
 
@@ -228,8 +247,20 @@ exports.generateDailyStats = async (deviceId, date) => {
             hora: picoPotenciaHora
         });
 
-        // Calcular minutos con luz útil (irradiancia > 50 W/m²)
-        const minutosLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
+        // Contar lecturas con luz útil
+        const lecturasConLuzUtil = readings.filter(r => hasUsefulLight(parseFloat(r.irradiance))).length;
+
+        // Calcular intervalo promedio entre lecturas
+        let intervaloPromedioSegundos = 60;
+
+        if (readings.length > 1) {
+            const primeraLectura = new Date(readings[0].timestampUTC).getTime();
+            const ultimaLectura = new Date(readings[readings.length - 1].timestampUTC).getTime();
+            const tiempoTotalSegundos = (ultimaLectura - primeraLectura) / 1000;
+            intervaloPromedioSegundos = tiempoTotalSegundos / (readings.length - 1);
+        }
+
+        const minutosLuzUtil = Math.round((lecturasConLuzUtil * intervaloPromedioSegundos) / 60);
 
         // Energía total del día (última lectura menos primera)
         const energiaTotalDia = parseFloat(readings[readings.length - 1].energiaAcumulada) -
